@@ -72,9 +72,10 @@ def main():
                 print("Socket connected to host " + HOST_NAME + " on port " + str(PORT_NUMBER))
 
         except socket.error as e:
+            print("Unable to reach " + HOST_NAME)
             print("Failed connection to host " + HOST_NAME + " on port " + str(PORT_NUMBER), file=sys.stderr)
             print("Reason ", str(e), file=sys.stderr)
-            sys.exit()
+            sys.exit(2)
 
         headerContainer = dict()
         length = 0
@@ -100,7 +101,7 @@ def main():
             for key in headerContainer.keys():
                 print(key + ": " + headerContainer[key])
         # Process status 200
-        if re.search("200 OK", status):
+        if re.search("200", status):
             if verbose:
                 print(status)
             # Process transfer-encoding: chunked
@@ -126,20 +127,23 @@ def main():
                 while True:
                     line = socketFile.readline()
                     length += len(line)
-                    sys.stdout.buffer.write(line)
+                    sys.stdout.buffer.write(line.strip())
+                    if len(line) == 0 or length >= int(headerContainer["content-length"]):
+                        break
                     if verbose:
                         print(length)
                         print(length, end=" Counted bytes\n")
                         print(int(headerContainer["content-length"]), end=" Expected length\n")
                         print(length == int(headerContainer["content-length"]), end=" Is equal?\n")
-                    if len(line) == 0 or length >= int(headerContainer["content-length"]):
-                        break
+
                 if verbose:
                     print("PRINT CONTENT")
                 s.close()
                 break
         # Process redirecting
-        elif re.search("30", status):
+        elif re.search("301", status) or re.search("302", status) or re.search("303", status) or re.search("307",
+                                                                                                           status) or re.search(
+                "308", status):
             if verbose:
                 print(status)
             headerContainer["status"] = status
@@ -147,22 +151,12 @@ def main():
             s.close()
         # Process unimplemented behaviour
         else:
-            if verbose:
-                print(status)
-            while True:
-                line = socketFile.readline()
-                length += len(line)
-                sys.stderr.buffer.write(line)
-                if verbose:
-                    print(length)
-                    print(length, end=" Counted bytes\n")
-                    print(int(headerContainer["content-length"]), end=" Expected length\n")
-                    print(length == int(headerContainer["content-length"]), end=" Is equal?\n")
-                if len(line) == 0 or length >= int(headerContainer["content-length"]):
-                    break
+            error = status.split(" ", maxsplit=1)
+            print(error[1], file=sys.stderr)
             sys.exit(1)
 
 
 if __name__ == "__main__":
     # execute only if run as a script
     main()
+
