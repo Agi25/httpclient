@@ -124,20 +124,8 @@ def main():
                     break
             # Process content-length
             else:
-                while True:
-                    line = socketFile.readline()
-                    length += len(line)
-                    sys.stdout.buffer.write(line.strip())
-                    if len(line) == 0 or length >= int(headerContainer["content-length"]):
-                        break
-                    if verbose:
-                        print(length)
-                        print(length, end=" Counted bytes\n")
-                        print(int(headerContainer["content-length"]), end=" Expected length\n")
-                        print(length == int(headerContainer["content-length"]), end=" Is equal?\n")
-
-                if verbose:
-                    print("PRINT CONTENT")
+                content=socketFile.read(int(headerContainer["content-length"]))
+                sys.stdout.buffer.write(content)
                 s.close()
                 break
         # Process redirecting
